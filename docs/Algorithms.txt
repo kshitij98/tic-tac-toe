@@ -1,0 +1,7 @@
+## Alpha beta Pruning
+
+## Monte Carlo
+
+## Mini-Max
+
+## Hash Table
