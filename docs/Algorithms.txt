@@ -1,7 +1,11 @@
 ## Alpha beta Pruning
+	- Requires heuristic (cumbersome to compute)
 
 ## Monte Carlo
+	- No heuristic
 
 ## Mini-Max
 
+
 ## Hash Table
+	- Required in any case
