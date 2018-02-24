@@ -110,7 +110,7 @@ class MonteCarlo:
 
 	def getValidMoves(self, board, oldMove):
 		validCells = []
-		blockMove = (oldMove[0] / SZ, blockMove[1] / SZ)
+		blockMove = (oldMove[0] % SZ, oldMove[1] % SZ)
 		boardState = board.board_status or self.currentBoardStatus
 		blockState = board.block_status or self.currentBlockStatus
 
@@ -147,6 +147,11 @@ class MonteCarlo:
 				boardState.block_status[int(move[0] / 4)][int(move[1] / 4)] = flag
 				if self.checkWinOnBoard(boardState.block_status, flag):
 					return (origFlag == flag)
+				if flag == config['P1']:
+					flag = config['P2']
+				else:
+					flag = config['P1']
+				winCount = 0
 			# Reverse the moves
 			else:
 				winCount = 0
@@ -175,13 +180,13 @@ class MonteCarlo:
 		random.seed()
 		currentBestProb = -0.1
 		currentBestCell = None
-		eachCellTime = 1.0 * config.TIME_LIM / len(self.validMoveCells)
+		eachCellTime = 1.0 * config['TIME_LIM'] / len(self.validMoveCells)
 		currentCellStartTime = time.time() * TUNIT
 
 		# Simulate Random Game Play from each cell
 		for cell in self.validMoveCells:
 			# Create a duplicate board
-			dupBoard = copy.deepcopy(board)
+			# dupBoard = copy.deepcopy(board)
 
 			# Create Match Stats for all
 			drawMatch 	= 0
@@ -189,7 +194,7 @@ class MonteCarlo:
 			lossMatch 	= 0
 			while currentCellStartTime + eachCellTime > time.time() * TUNIT:
 				orignalBoard = copy.deepcopy(board)
-				outcome = self.gameSimulation()
+				outcome = self.gameSimulation(orignalBoard, cell, flag)
 				if outcome == True:
 					winMatch += 1
 				elif outcome == False:
@@ -202,10 +207,9 @@ class MonteCarlo:
 						winMatch += 1
 					else:
 						drawMatch += 1
-				currentCellStartTime = time.time() * TUNIT
-				pass
 			currentProb = 1.0 * winMatch / (winMatch + drawMatch + lossMatch)
-			if currentProb > currentBestProb:
+			currentCellStartTime = time.time() * TUNIT
+			if currentProb > currentBestProb or (random.randint(0, 2) == 1 and currentProb == currentBestProb):
 				currentBestProb = currentProb
 				currentBestCell = cell
 		return currentBestCell
