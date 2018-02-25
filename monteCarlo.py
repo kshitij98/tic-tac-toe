@@ -3,6 +3,8 @@ import random
 import time
 import hashlib
 import copy
+import os
+import traceback
 
 SZ = 4
 TUNIT = 1000000
@@ -10,7 +12,7 @@ config = {
 	'P1':	 		'x',
 	'P2': 			'o',
 	'EM': 			'-',
-	'TIME_LIM': 	14 * TUNIT,
+	'TIME_LIM': 	16 * TUNIT,
 	'TIME_DELTA': 	TUNIT / 2,
 	'POINTS':		[[6, 4, 4, 6],
 					 [4, 3, 3, 4],
@@ -25,10 +27,8 @@ class MonteCarlo:
 		self.currentBlockStatus = None
 		self.currentBoardStatus = None
 		self.transpositionTable = dict()
+		self.movesMade = 0
 		return
-
-	def handler(signum, frame):
-
 
 	def drawPoints(self, boardState, myFlag):
 		oppFlag = config['P1']
@@ -38,18 +38,18 @@ class MonteCarlo:
 		myScore = oppScore = 0
 		for i in xrange(4):
 			for j in xrange(4):
-				if boardState.block_status == myFlag:
+				if boardState[i][j] == myFlag:
 					myScore += config['POINTS'][i][j]
-				elif boardState.block_status == oppFlag:
+				elif boardState[i][j] == oppFlag:
 					oppScore += config['POINTS'][i][j]
 
 		return (myScore, oppScore)
 
 	def diamondCheck(self, boardState, blockCoord, flag, coord):
-		flag = ((boardState[blockCoord[0] * SZ + coord[0] - 1][blockCoord[0] * SZ + coord[1]] == flag)
-						and (boardState[blockCoord[0] * SZ + coord[0]][blockCoord[0] * SZ + coord[1] - 1] == flag)
-						and (boardState[blockCoord[0] * SZ + coord[0] + 1][blockCoord[0] * SZ + coord[1]] == flag)
-						and (boardState[blockCoord[0] * SZ + coord[0]][blockCoord[0] * SZ + coord[1] + 1] == flag))
+		flag = ((boardState[blockCoord[0] * SZ + coord[0] - 1][blockCoord[1] * SZ + coord[1]] == flag)
+						and (boardState[blockCoord[0] * SZ + coord[0]][blockCoord[1] * SZ + coord[1] - 1] == flag)
+						and (boardState[blockCoord[0] * SZ + coord[0] + 1][blockCoord[1] * SZ + coord[1]] == flag)
+						and (boardState[blockCoord[0] * SZ + coord[0]][blockCoord[1] * SZ + coord[1] + 1] == flag))
 
 		return flag
 
@@ -69,14 +69,14 @@ class MonteCarlo:
 		for i in xrange(SZ):
 			bFlag = True
 			for j in xrange(SZ):
-				bFlag = bFlag and (boardState[blockCoord[0] * SZ + i][blockCoord[0] * SZ + j] == flag)
+				bFlag = bFlag and (boardState[blockCoord[0] * SZ + i][blockCoord[1] * SZ + j] == flag)
 			flag = flag or bFlag
 
 		# Vertical Line Check
 		for i in xrange(SZ):
 			bFlag = True
 			for j in xrange(SZ):
-				bFlag = bFlag and (boardState[blockCoord[0] * SZ + j][blockCoord[0] * SZ + i] == flag)
+				bFlag = bFlag and (boardState[blockCoord[0] * SZ + j][blockCoord[1] * SZ + i] == flag)
 			flag = flag or bFlag
 
 		# Diamond Check
@@ -94,14 +94,14 @@ class MonteCarlo:
 		for i in xrange(SZ):
 			bFlag = True
 			for j in xrange(SZ):
-				bFlag = bFlag and (boardState[i][j] == flag)
+				bFlag = bFlag and (blockState[i][j] == flag)
 			flag = flag or bFlag
 
 		# Vertical Line Check
 		for i in xrange(SZ):
 			bFlag = True
 			for j in xrange(SZ):
-				bFlag = bFlag and (boardState[j][i] == flag)
+				bFlag = bFlag and (blockState[j][i] == flag)
 			flag = flag or bFlag
 
 		# Diamond Check
@@ -145,7 +145,7 @@ class MonteCarlo:
 		while True:
 			boardState.board_status[move[0]][move[1]] = flag # Place the marker on Board
 			if flag == origFlag:
-				self.stateList.append(hashlib.sha224(self.listToTuple(boardState.board_status)).hexdigest())
+				self.stateList.append(hashlib.md5(self.listToTuple(boardState.board_status)).hexdigest())
 			# Check if the Small Block is won
 			if self.checkWinInBlock(boardState.board_status, (int(move[0] / 4), int(move[1] / 4)), flag) and winCount <= 2:
 				winCount += 1
@@ -179,68 +179,74 @@ class MonteCarlo:
 		self.currentState = self.stateList[0]
 		for i in self.stateList:
 			if i in self.transpositionTable:
-				self.transpositionTable[i]['winMatch'] += win
-				self.transpositionTable[i]['drawMatch'] += draw
-				self.transpositionTable[i]['lossMatch'] += loss
+				temp = self.transpositionTable[i]
+				temp['winMatch']  += win
+				temp['drawMatch'] += draw
+				temp['lossMatch'] += loss
 			else:
 				self.transpositionTable[i] = dict()
-				self.transpositionTable[i]['winMatch'] = win
-				self.transpositionTable[i]['lossMatch'] = draw
-				self.transpositionTable[i]['drawMatch'] = loss
+				temp = self.transpositionTable[i]
+				temp['winMatch']  = win
+				temp['lossMatch'] = draw
+				temp['drawMatch'] = loss
 
 	# Move the piece
 	def move(self, board, oldMove, flag):
 		startTime = int(time.time() * TUNIT)	# Get time in ms
 		# Deep copy the Current Board State
-		# self.currentBoardStatus = self.clone(board.board_status)
-		# self.currentBlockStatus = self.clone(board.block_status)
 		self.validMoveCells 	= self.getValidMoves(board, oldMove)
-
-		# Create a duplicate board
-		dupBoard = copy.deepcopy(board)
+		self.movesMade 			+= 1
 
 		# Seed random number generator
-		random.seed()
-		currentBestProb = -0.1
+		random.seed(os.urandom(7))
+		currentBestProb = 1.1
 		currentBestCell = None
 		eachCellTime = 1.0 * config['TIME_LIM'] / len(self.validMoveCells)
 		currentCellStartTime = time.time() * TUNIT
+		try:
+			# Simulate Random Game Play from each cell
+			for cell in self.validMoveCells:
 
-		# Simulate Random Game Play from each cell
-		for cell in self.validMoveCells:
-			# Create a duplicate board
-			# dupBoard = copy.deepcopy(board)
-
-			# Create Match Stats for all
-			# drawMatch 	= 0
-			# winMatch 	= 0
-			# lossMatch 	= 0
-			# count    	= 0
-			while currentCellStartTime + eachCellTime > time.time() * TUNIT:
-				# count += 1
-				orignalBoard = copy.deepcopy(board)
-				outcome = self.gameSimulation(orignalBoard, cell, flag)
-				if outcome == True:
-					self.updateTransposition(win=1)
-					# winMatch += 1
-				elif outcome == False:
-					self.updateTransposition(loss=1)
-					# lossMatch += 1
-				else:
-					(myScore, oppScore) = self.drawPoints(dupBoard, flag)
-					if myScore < oppScore:
-						# lossMatch += 1
-						self.updateTransposition(loss=1)
-					elif myScore > oppScore:
+				while currentCellStartTime + eachCellTime > time.time() * TUNIT:
+					orignalBoard = copy.deepcopy(board)
+					outcome = self.gameSimulation(orignalBoard, cell, flag)
+					if outcome == True:
 						self.updateTransposition(win=1)
-						# winMatch += 1
+					elif outcome == False:
+						self.updateTransposition(loss=1)
 					else:
-						self.updateTransposition(draw=1)
-						# drawMatch += 1
-				# print count
-			currentProb = 1.0 * self.transpositionTable[self.currentState]['winMatch'] / (self.transpositionTable[self.currentState]['winMatch'] + self.transpositionTable[self.currentState]['drawMatch'] + self.transpositionTable[self.currentState]['lossMatch'])
+						(myScore, oppScore) = self.drawPoints(outcome, flag)
+						if myScore < oppScore:
+							self.updateTransposition(loss=1)
+						elif myScore > oppScore:
+							self.updateTransposition(win=1)
+						else:
+							self.updateTransposition(draw=1)
+
+				temp = self.transpositionTable[self.currentState]
+				currentProb = 1.0 * temp['lossMatch'] / (temp['winMatch'] + temp['drawMatch'] + temp['lossMatch'])
+				currentCellStartTime = time.time() * TUNIT
+				# print cell
+				# print currentProb
+				# print temp['winMatch']
+				if temp['winMatch'] > 0:
+					print '=====A win Found!!======'
+					exit(0)
+				if currentProb < currentBestProb:
+					currentBestProb = currentProb
+					currentBestCell = cell
+			if self.movesMade > 13:
+				self.transpositionTable.clear()
+				self.movesMade = 0
+			return currentBestCell
+		except:
+			temp = self.transpositionTable[self.currentState]
+			currentProb = 1.0 * temp['lossMatch'] / (temp['winMatch'] + temp['drawMatch'] + temp['lossMatch'])
 			currentCellStartTime = time.time() * TUNIT
-			if currentProb > currentBestProb or (random.randint(0, 2) == 1 and currentProb == currentBestProb):
+			if currentProb < currentBestProb:
 				currentBestProb = currentProb
 				currentBestCell = cell
-		return currentBestCell
+			if self.movesMade > 13:
+				self.transpositionTable.clear()
+				self.movesMade = 0
+			return currentBestCell

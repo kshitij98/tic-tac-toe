@@ -369,8 +369,8 @@ if __name__ == '__main__':
 	else:
 		print 'Invalid option'
 		sys.exit(1)
-	obj1 = Player77()
+	obj1 = Random_Player()
 	obj2 = MonteCarlo()
-	x = gameplay(obj2, obj1)
+	x = gameplay(obj1, obj2)
 	print "Player 1 points:", x[0]
 	print "Player 2 points:", x[1]
