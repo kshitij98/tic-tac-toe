@@ -10,7 +10,7 @@ config = {
 	'P1':	 		'x',
 	'P2': 			'o',
 	'EM': 			'-',
-	'TIME_LIM': 	15 * TUNIT,
+	'TIME_LIM': 	14 * TUNIT,
 	'TIME_DELTA': 	TUNIT / 2,
 	'POINTS':		[[6, 4, 4, 6],
 					 [4, 3, 3, 4],
@@ -24,7 +24,11 @@ class MonteCarlo:
 		self.clone = copy.deepcopy
 		self.currentBlockStatus = None
 		self.currentBoardStatus = None
+		self.transpositionTable = dict()
 		return
+
+	def handler(signum, frame):
+
 
 	def drawPoints(self, boardState, myFlag):
 		oppFlag = config['P1']
@@ -128,16 +132,22 @@ class MonteCarlo:
 
 		return validCells
 
+	def listToTuple(self, T):
+		X = [''.join(x) for x in T]
+		return ''.join(X)
+
 	def gameSimulation(self, boardState, move, flag):
 		origFlag = flag
 		winCount = 0
+		self.stateList = list()
 
 		# Play Gme until End
 		while True:
 			boardState.board_status[move[0]][move[1]] = flag # Place the marker on Board
-
-			# Check ifthe Small Block is won
-			if self.checkWinInBlock(boardState.board_status, (int(move[0] / 4), int(move[1] / 4)),flag) and winCount < 2:
+			if flag == origFlag:
+				self.stateList.append(hashlib.sha224(self.listToTuple(boardState.board_status)).hexdigest())
+			# Check if the Small Block is won
+			if self.checkWinInBlock(boardState.board_status, (int(move[0] / 4), int(move[1] / 4)), flag) and winCount <= 2:
 				winCount += 1
 				boardState.block_status[int(move[0] / 4)][int(move[1] / 4)] = flag
 				if self.checkWinOnBoard(boardState.block_status, flag):
@@ -165,12 +175,25 @@ class MonteCarlo:
 			move = movesAvail[random.randint(0, len(movesAvail) - 1)]
 		return boardState.block_status
 
+	def updateTransposition(self, win=0, draw=0, loss=0):
+		self.currentState = self.stateList[0]
+		for i in self.stateList:
+			if i in self.transpositionTable:
+				self.transpositionTable[i]['winMatch'] += win
+				self.transpositionTable[i]['drawMatch'] += draw
+				self.transpositionTable[i]['lossMatch'] += loss
+			else:
+				self.transpositionTable[i] = dict()
+				self.transpositionTable[i]['winMatch'] = win
+				self.transpositionTable[i]['lossMatch'] = draw
+				self.transpositionTable[i]['drawMatch'] = loss
+
 	# Move the piece
 	def move(self, board, oldMove, flag):
 		startTime = int(time.time() * TUNIT)	# Get time in ms
 		# Deep copy the Current Board State
-		self.currentBoardStatus = self.clone(board.board_status)
-		self.currentBlockStatus = self.clone(board.block_status)
+		# self.currentBoardStatus = self.clone(board.board_status)
+		# self.currentBlockStatus = self.clone(board.block_status)
 		self.validMoveCells 	= self.getValidMoves(board, oldMove)
 
 		# Create a duplicate board
@@ -189,25 +212,33 @@ class MonteCarlo:
 			# dupBoard = copy.deepcopy(board)
 
 			# Create Match Stats for all
-			drawMatch 	= 0
-			winMatch 	= 0
-			lossMatch 	= 0
+			# drawMatch 	= 0
+			# winMatch 	= 0
+			# lossMatch 	= 0
+			# count    	= 0
 			while currentCellStartTime + eachCellTime > time.time() * TUNIT:
+				# count += 1
 				orignalBoard = copy.deepcopy(board)
 				outcome = self.gameSimulation(orignalBoard, cell, flag)
 				if outcome == True:
-					winMatch += 1
+					self.updateTransposition(win=1)
+					# winMatch += 1
 				elif outcome == False:
-					lossMatch += 1
+					self.updateTransposition(loss=1)
+					# lossMatch += 1
 				else:
 					(myScore, oppScore) = self.drawPoints(dupBoard, flag)
 					if myScore < oppScore:
-						lossMatch += 1
+						# lossMatch += 1
+						self.updateTransposition(loss=1)
 					elif myScore > oppScore:
-						winMatch += 1
+						self.updateTransposition(win=1)
+						# winMatch += 1
 					else:
-						drawMatch += 1
-			currentProb = 1.0 * winMatch / (winMatch + drawMatch + lossMatch)
+						self.updateTransposition(draw=1)
+						# drawMatch += 1
+				# print count
+			currentProb = 1.0 * self.transpositionTable[self.currentState]['winMatch'] / (self.transpositionTable[self.currentState]['winMatch'] + self.transpositionTable[self.currentState]['drawMatch'] + self.transpositionTable[self.currentState]['lossMatch'])
 			currentCellStartTime = time.time() * TUNIT
 			if currentProb > currentBestProb or (random.randint(0, 2) == 1 and currentProb == currentBestProb):
 				currentBestProb = currentProb
