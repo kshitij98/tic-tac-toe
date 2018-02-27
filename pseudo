@@ -1,0 +1,86 @@
+- Validate each move by using MiniMax or MonteCarlo
+
+- Set BONUS_MOVE = false before returning
+
+- Apply MiniMax after X number of moves
+
+- Add condition in assign points if this block is already won by someone
+
+- Assign -INF to occupied cells in points table
+
+
+
+FUNCTIONS
+=========
+~~- Copy board
+~~- Initialise()
+- Assign points to block()
+~~- isValuable()
+- 
+
+
+- Convert it entirely to MiniMax
+	- Scale each useless to 100x
+	- Normal Heuristic
+
+
+Move():
+
+~~CopyBoard{
+		Copy board
+}
+	
+~~Initialise{
+	If FIRST_MOVE: (Set pivot & Copy board?)
+		Set pivotX = 2 + (oldX < 3)
+		Set pivotY = 2 + (oldY < 3)
+		Set BONUS_MOVE = false
+}	
+
+AssignPoints() {
+	If Current == Valuable:
+		
+		If not bonus move:
+-			Try to win this block:
+-				Check second move to handle the following conditions: (or maybe MiniMax or MonteCarlo)
+-								The second block is not a definite win for the opponent which can direct to a valuable block. (This is being handled already)
+-								// TODO
+-				Set BONUS_MOVE = true
+-			RETURN move()
+		
+		Else: (Try not to win if it leads to valuable block)
+-			W[] = Give weights to each cell to win this block.
+-			UB[] = Get the list of useless blocks.
+-			Find the probability of opponent win in each useless block.
+-			Assign points by product
+-			Update Kshitij Move to the most useless block
+	
+	
+	Else: (No check for BONUS_MOVE)
+		Try to win? (RARE)
+			- Don't lose a valuable block to win this.
+
+		Try to draw the block by: ()
+			W[] = Assign weights to each cell according to opponent. [6, 4, 3] Matrix
+			Sort cells by weight
+		
+		Most useless = NULL
+		Iterate on the cells:
+			If this is sufficiently useless:
+				Update Kshitij
+			else update the most useless till now.
+		RETURN most useless.
+}
+
+	if OPEN_MOVE:
+		FOR all blocks:
+			Assign points to each valid block.
+		Pick the most point cell.
+
+
+
+	Run a naive MiniMax to validate the move.
+		If MiniMax.Prob[MiniMax.Move] > RELAXATION_FACTOR * Kshitij: (MiniMax totally declines the current move by Kshitij)
+			RETURN MiniMax 
+		Else:
+			RETURN Kshitij

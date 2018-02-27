@@ -6,6 +6,7 @@ import copy
 import traceback
 from monteCarlo import MonteCarlo
 from bhasin import Player77
+from kshitij import Kshitij
 
 TIME = 16
 MAX_PTS = 68
@@ -370,7 +371,7 @@ if __name__ == '__main__':
 		print 'Invalid option'
 		sys.exit(1)
 	obj1 = Random_Player()
-	obj2 = MonteCarlo()
+	obj2 = Kshitij()
 	x = gameplay(obj1, obj2)
 	print "Player 1 points:", x[0]
 	print "Player 2 points:", x[1]

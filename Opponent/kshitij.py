@@ -227,15 +227,16 @@ class Kshitij:
 			winning = winning or bwinning
 		
 		# Diamond Check
-		winning = winning or self.diamondCheck(currBlock, flag, (1, 1))
-		winning = winning or self.diamondCheck(currBlock, flag, (1, 2))
-		winning = winning or self.diamondCheck(currBlock, flag, (2, 1))
-		winning = winning or self.diamondCheck(currBlock, flag, (2, 2))
+		winning = winning or self.diamondCheckBlock(currBlock, flag, (1, 1))
+		winning = winning or self.diamondCheckBlock(currBlock, flag, (1, 2))
+		winning = winning or self.diamondCheckBlock(currBlock, flag, (2, 1))
+		winning = winning or self.diamondCheckBlock(currBlock, flag, (2, 2))
 		
 		return winning
 
 
 	def addMove(self, playedMove, flag):
+		# print("Adding move")
 		self.board[playedMove[0]][playedMove[1]] = flag
 		currBlock = (playedMove[0] // 4, playedMove[1] // 4)
 		if self.block[currBlock[0]][currBlock[1]] == config['EM'] and self.checkWinInBlock(currBlock, flag):
@@ -243,6 +244,7 @@ class Kshitij:
 
 
 	def removeMove(self, playedMove, flag):
+		# print("Removing move")
 		self.board[playedMove[0]][playedMove[1]] = config['EM']
 		currBlock = (playedMove[0] // 4, playedMove[1] // 4)
 		if self.block[currBlock[0]][currBlock[1]] == flag and not self.checkWinInBlock(currBlock, flag):
@@ -266,10 +268,10 @@ class Kshitij:
 		return validMoves
 
 
-	def isFinished():
+	def isFinished(self):
 		# winning = False
-		p1Won = False
-		p2Won = False
+		P1Won = False
+		P2Won = False
 
 		for i in xrange(4):
 			p1winning = True
@@ -277,8 +279,8 @@ class Kshitij:
 			for j in xrange(4):
 				p1winning = p1winning and (self.board[i][j] == config['P1'])
 				p2winning = p2winning and (self.board[i][j] == config['P2'])
-			p1Won = p1Won or p1winning
-			p2Won = p2Won or p2winning
+			P1Won = P1Won or p1winning
+			P2Won = P2Won or p2winning
 
 		
 		# Vertical Line Check
@@ -288,8 +290,8 @@ class Kshitij:
 			for j in xrange(4):
 				p1winning = p1winning and (self.board[j][i] == config['P1'])
 				p2winning = p2winning and (self.board[j][i] == config['P2'])
-			p1Won = p1Won or p1winning
-			p2Won = p2Won or p2winning
+			P1Won = P1Won or p1winning
+			P2Won = P2Won or p2winning
 		
 		# Diamond Check
 		P1Won = P1Won or self.diamondCheckGame(config['P1'], (1, 1))
@@ -326,19 +328,19 @@ class Kshitij:
 		for i in xrange(4):
 			prob = 1
 			for j in xrange(4):
-				prob *= self.getWinningChance((i, j), player)
+				prob *= self.getWinningChance((i, j), self.player)
 			maxProb = max(maxProb, prob)
 
 		for i in xrange(4):
 			prob = 1
 			for j in xrange(4):
-				prob *= self.getWinningChance((j, i), player)
+				prob *= self.getWinningChance((j, i), self.player)
 			maxProb = max(maxProb, prob)
 
-		maxProb = max(maxProb, self.getWinningChance((1, 1), player))
-		maxProb = max(maxProb, self.getWinningChance((1, 2), player))
-		maxProb = max(maxProb, self.getWinningChance((2, 1), player))
-		maxProb = max(maxProb, self.getWinningChance((2, 2), player))
+		maxProb = max(maxProb, self.diamondWinChance((1, 1), self.player))
+		maxProb = max(maxProb, self.diamondWinChance((1, 2), self.player))
+		maxProb = max(maxProb, self.diamondWinChance((2, 1), self.player))
+		maxProb = max(maxProb, self.diamondWinChance((2, 2), self.player))
 
 		return maxProb
 
@@ -352,20 +354,25 @@ class Kshitij:
 		elif self.isFinished():
 			return self.winnerH
 	
+
 		if ourMove:
 			finalH = -config['INF']
 			currBlock = (lastMove[0] % 4, lastMove[1] % 4)
 
 			validMoves = self.getValidMoves(currBlock)
+			# if currDepth == 0:
+				# print validMoves
+
+			# print(validMoves)
 
 			numOfMoves = len(validMoves)
 			for i in xrange(numOfMoves):		# for each child of node
-				addMove(validMoves[i], config[self.player])
-				finalH = max(finalH, miniMax(currDepth + 1, alpha, beta, False, validMoves[i]))
+				self.addMove(validMoves[i], config[self.player])
+				finalH = max(finalH, self.miniMax(currDepth + 1, alpha, beta, False, validMoves[i]))
 				alpha = max(alpha, finalH)
+				self.removeMove(validMoves[i], config[self.player])
 				if beta <= alpha:
 					break
-				removeMove(validMoves[i], config[self.player])
 
 			if currDepth == 1 and lastMove == self.foundMove:
 				self.stratH = finalH
@@ -373,21 +380,33 @@ class Kshitij:
 				self.miniMaxMoveH = finalH
 				self.miniMaxMove = lastMove
 
+			if currDepth == 1:
+				print finalH
+			# print(currDepth, finalH)
 			return finalH
 		else:
 			finalH = config['INF']
 			currBlock = (lastMove[0] % 4, lastMove[1] % 4)
 
 			validMoves = self.getValidMoves(currBlock)
-
 			numOfMoves = len(validMoves)
 			for i in xrange(numOfMoves):		# for each child of node
-				addMove(validMoves[i], config[self.opponent])
-				finalH = min(finalH, miniMax(currDepth + 1, alpha, beta, True, validMoves[i]))
+				self.addMove(validMoves[i], config[self.opponent])
+				finalH = min(finalH, self.miniMax(currDepth + 1, alpha, beta, True, validMoves[i]))
 				beta = min(beta, finalH)
+				self.removeMove(validMoves[i], config[self.opponent])
 				if beta <= alpha:
 					break # (* alpha cut-off *)
-				removeMove(validMoves[i], config[self.opponent])
+
+			if currDepth == 1 and lastMove == self.foundMove:
+				self.stratH = finalH
+			elif currDepth == 1 and finalH > self.miniMaxMoveH:
+				self.miniMaxMoveH = finalH
+				self.miniMaxMove = lastMove
+
+			if currDepth == 1:
+				print finalH
+			# print(finalH)
 			return finalH
 
 
@@ -426,17 +445,22 @@ class Kshitij:
 			self.foundMove = self.findBestMove(pointsTable, currBlock)
 	
 			# print("Executed properly.\n")
-			print(self.player)
-			print(self.pivot)
+			# print(self.player)
+			# print(self.pivot)
 
 			for i in xrange(3, 50):
+				# print("BOARD before ", i, self.board)
+				# print("BLOCK before ", i, self.block)
 				print(i)
 				self.maxDepth = i
-				self.miniMax(i, -config['INF'], config['INF'], True, oldMove)
+				self.miniMax(0, -config['INF'], config['INF'], True, oldMove)
 
 		except Exception as e:
 			print 'Exception occurred ', e
 
+		print self.miniMaxMove
 		if self.stratH * 1.5 < self.miniMaxMoveH:
 			return self.miniMaxMove
+		print("Used stratergy")
+		print self.foundMove
 		return self.foundMove
