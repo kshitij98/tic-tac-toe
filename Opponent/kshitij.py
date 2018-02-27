@@ -17,7 +17,8 @@ config = {
 	'POINTS':		[[6, 4, 4, 6],
 					 [4, 3, 3, 4],
 					 [4, 3, 3, 4],
-					 [6, 4, 4, 6]]
+					 [6, 4, 4, 6]],
+	'INF': 999999999999999999,
 }
 
 class Kshitij:
@@ -57,6 +58,10 @@ class Kshitij:
 		if self.block[currBlock[0]][currBlock[1]] != config['EM']:
 			return True
 		return False
+
+	def getWinningChance(self, currBlock, player):
+		if self.block[currBlock[0]][currBlock[1]] != config['EM']:
+			return 
 
 	def assignPoints(self, currBlock, points):
 		if self.isValuable(currBlock):
@@ -112,3 +117,5 @@ class Kshitij:
 		foundMove = self.findBestMove(pointsTable, (currBlock[0] * 4, currBlock[1] * 4))
 
 		print(foundMove)
+
+		print("Executed properly.\n")
