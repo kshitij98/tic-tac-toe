@@ -380,8 +380,8 @@ class Kshitij:
 				self.miniMaxMoveH = finalH
 				self.miniMaxMove = lastMove
 
-			if currDepth == 1:
-				print finalH
+			# if currDepth == 1:
+				# print finalH
 			# print(currDepth, finalH)
 			return finalH
 		else:
@@ -404,8 +404,8 @@ class Kshitij:
 				self.miniMaxMoveH = finalH
 				self.miniMaxMove = lastMove
 
-			if currDepth == 1:
-				print finalH
+			# if currDepth == 1:
+				# print finalH
 			# print(finalH)
 			return finalH
 
@@ -459,8 +459,10 @@ class Kshitij:
 			print 'Exception occurred ', e
 
 		print self.miniMaxMove
+		print "miniMaxMove", self.miniMaxMoveH
+		print "startegy", self.stratH
 		if self.stratH * 1.5 < self.miniMaxMoveH:
 			return self.miniMaxMove
 		print("Used stratergy")
-		print self.foundMove
+		# print self.foundMove
 		return self.foundMove
